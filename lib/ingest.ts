@@ -4,6 +4,8 @@ import { extractMessage, type MessageRow } from "./extract";
 import { getCursor, insertMessages, setCursor } from "./store";
 import { sweepSpam } from "./spam-sweep";
 import { ensureSetup } from "./setup";
+import { translatePending } from "./translate";
+import { announceNew } from "./announce";
 
 // Stay a couple of blocks behind the head so reorgs rarely touch us.
 const CONFIRMATIONS = 2n;
@@ -19,7 +21,24 @@ export type IngestResult = {
   inserted: number;
   markedSpam: number;
   behind: string; // blocks still left to catch up
+  extras?: Record<string, unknown>;
 };
+
+// Follow-up work after new messages land. Failures here never fail the ingest.
+async function afterIngest(): Promise<Record<string, unknown>> {
+  const extras: Record<string, unknown> = {};
+  try {
+    extras.translation = await translatePending();
+  } catch (err) {
+    extras.translation = { error: (err as Error).message };
+  }
+  try {
+    extras.x = await announceNew();
+  } catch (err) {
+    extras.x = { error: (err as Error).message };
+  }
+  return extras;
+}
 
 function client() {
   const url = process.env.ETH_RPC_URL;
@@ -60,7 +79,10 @@ export async function ingest(maxBlocks = DEFAULT_MAX_BLOCKS): Promise<IngestResu
   const from = cursor + 1n;
   const to = head < cursor + BigInt(maxBlocks) ? head : cursor + BigInt(maxBlocks);
   if (from > to) {
-    return { from: null, to: null, head: head.toString(), blocks: 0, found: 0, inserted: 0, markedSpam: 0, behind: "0" };
+    return {
+      from: null, to: null, head: head.toString(), blocks: 0, found: 0, inserted: 0, markedSpam: 0, behind: "0",
+      extras: await afterIngest(),
+    };
   }
 
   const numbers: bigint[] = [];
@@ -91,5 +113,6 @@ export async function ingest(maxBlocks = DEFAULT_MAX_BLOCKS): Promise<IngestResu
     inserted,
     markedSpam,
     behind: (head - to).toString(),
+    extras: await afterIngest(),
   };
 }

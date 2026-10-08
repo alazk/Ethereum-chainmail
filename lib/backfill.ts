@@ -180,6 +180,22 @@ export function messagesFromScout(txs: ScoutTx[]): MessageRow[] {
   return rows;
 }
 
+// Fetches one address's full history from Blockscout and stores its messages.
+export async function backfillAddress(address: string): Promise<{ transactions: number; messages: number; inserted: number }> {
+  const rows: MessageRow[] = [];
+  let seen = 0;
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const txs = await scoutPage(address, page);
+    seen += txs.length;
+    rows.push(...messagesFromScout(txs));
+    if (txs.length < PAGE_SIZE) break;
+  }
+  const inserted = await insertMessages(rows);
+  const senders = [...new Set(rows.map((r) => r.from_addr))];
+  if (senders.length) await sweepSpam(senders);
+  return { transactions: seen, messages: rows.length, inserted };
+}
+
 export type LabelBackfillResult = {
   addresses: number;
   done: number;
@@ -224,20 +240,11 @@ export async function backfillLabels(
   while (next < labels.length && (result.done === next || Date.now() - started < budgetMs)) {
     const { address } = labels[next];
     try {
-      const rows: MessageRow[] = [];
-      let seen = 0;
-      for (let page = 1; page <= MAX_PAGES; page++) {
-        const txs = await scoutPage(address, page);
-        seen += txs.length;
-        rows.push(...messagesFromScout(txs));
-        if (txs.length < PAGE_SIZE) break;
-      }
-      result.transactions += seen;
-      result.found += rows.length;
-      result.perAddress[address] = { transactions: seen, messages: rows.length };
-      result.inserted += await insertMessages(rows);
-      const senders = [...new Set(rows.map((r) => r.from_addr))];
-      if (senders.length) await sweepSpam(senders);
+      const r = await backfillAddress(address);
+      result.transactions += r.transactions;
+      result.found += r.messages;
+      result.inserted += r.inserted;
+      result.perAddress[address] = { transactions: r.transactions, messages: r.messages };
       next++;
       fails = 0;
     } catch (err) {

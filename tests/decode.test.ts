@@ -84,6 +84,12 @@ describe("classify", () => {
     expect(classify("RETURN THE FUNDS").status).toBe("visible");
   });
 
+  it("flags messages that are only a link", () => {
+    expect(classify("https://x.com/HyperliquidX").reason).toBe("link only");
+    expect(classify("  t.me/somechannel  ").reason).toBe("link only");
+    expect(classify("Read our statement: https://euler.finance/statement").status).toBe("visible");
+  });
+
   it("flags long encoded payloads", () => {
     expect(classify("QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdGQmYwAPJz").reason).toBe("encoded data");
   });

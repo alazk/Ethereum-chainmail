@@ -223,3 +223,95 @@ a:hover { text-decoration-thickness: 2px; }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
 }
+
+/* ---- Search ---- */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+.search { margin-top: 1.25rem; max-width: 30rem; }
+.search input {
+  width: 100%;
+  font: inherit;
+  font-size: var(--step--1);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+}
+.search input::placeholder { color: var(--ink-soft); }
+
+/* ---- Translation ---- */
+.msg-translation {
+  margin: 0.6rem 0 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--rule);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 38rem;
+}
+.msg-translation-label {
+  display: block;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-bottom: 0.15rem;
+}
+
+/* ---- Hacks ---- */
+.incidents { list-style: none; margin: 0; padding: 0 0 0 var(--gutter); }
+.incident-row { padding: 1.1rem 0; }
+.incident-row + .incident-row { border-top: 1px solid var(--rule); }
+.incident-name { font-size: var(--step-2); font-weight: 600; color: var(--ink); text-decoration: none; }
+.incident-name:hover { text-decoration: underline; }
+.incident-meta {
+  margin: 0.35rem 0 0;
+  display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem;
+  font-size: var(--step--1); color: var(--ink-soft);
+}
+.quiet-incidents, .incident-addresses {
+  padding-left: var(--gutter);
+  margin-top: 2.5rem;
+  font-size: var(--step--1);
+  color: var(--ink-soft);
+}
+.incident-parties { display: flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; margin-top: 0.5rem !important; }
+.section-title {
+  padding-left: var(--gutter);
+  font-size: var(--step-1);
+  font-weight: 600;
+  margin: 2.5rem 0 1.25rem;
+}
+.story { list-style: none; margin: 0; }
+.crowd .msg-body { font-size: var(--step-0); }
+.more-inline { padding-left: var(--gutter); margin: 0; }
+.more { display: flex; gap: 1.25rem; }
+
+/* ---- Admin ---- */
+.admin { padding-left: var(--gutter); }
+.admin section { margin-bottom: 2.75rem; }
+.admin h2 { font-size: var(--step-1); margin: 0 0 0.75rem; }
+.admin p.hint { margin: 0 0 0.75rem; color: var(--ink-soft); font-size: var(--step--1); max-width: 36rem; }
+.admin form.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; margin: 0 0 0.75rem; }
+.admin label { display: flex; flex-direction: column; gap: 0.2rem; font-size: var(--step--1); color: var(--ink-soft); }
+.admin input, .admin select {
+  font: inherit; font-size: var(--step--1); color: var(--ink);
+  background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 0.45rem 0.6rem; min-width: 0;
+}
+.admin input.wide { width: 25rem; max-width: 100%; }
+.admin button {
+  font: inherit; font-size: var(--step--1);
+  color: var(--paper); background: var(--ink);
+  border: 0; border-radius: 6px; padding: 0.5rem 0.85rem; cursor: pointer;
+}
+.admin button.quiet { color: var(--ink); background: transparent; border: 1px solid var(--rule); }
+.admin .card { border-top: 1px solid var(--rule); padding: 0.9rem 0; }
+.admin .card p { margin: 0 0 0.4rem; }
+.admin .sample { font-size: var(--step--1); color: var(--ink-soft); white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin .notice { padding: 0.6rem 0.8rem; background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 6px; }
+.admin table { border-collapse: collapse; font-size: var(--step--1); width: 100%; }
+.admin td, .admin th { text-align: left; padding: 0.35rem 0.5rem 0.35rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.label-results { list-style: none; margin: 0; padding: 0 0 0 var(--gutter); display: flex; flex-direction: column; gap: 0.5rem; }
+.label-results a:not(.party) { font-size: var(--step--1); }

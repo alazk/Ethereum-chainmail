@@ -12,6 +12,8 @@ export type FeedMessage = {
   value_wei: string;
   body: string;
   pair_key: string;
+  lang?: string | null;
+  translation?: string | null;
   from_name: string | null;
   from_kind: LabelKind | null;
   to_name: string | null;
@@ -38,7 +40,7 @@ export async function getFeed(filter: Filter, before?: string): Promise<FeedMess
   const cursor = parseCursor(before);
   return sql<FeedMessage[]>`
     select m.tx_hash, m.block_number, m.block_time, m.tx_index, m.from_addr, m.to_addr,
-           m.value_wei, m.body, m.pair_key,
+           m.value_wei, m.body, m.pair_key, m.lang, m.translation,
            lf.name as from_name, lf.kind as from_kind,
            lt.name as to_name, lt.kind as to_kind,
            (select count(*)::int from messages t
@@ -59,7 +61,7 @@ export async function getThread(a: string, b: string): Promise<FeedMessage[]> {
   const key = x < y ? `${x}:${y}` : `${y}:${x}`;
   return db()<FeedMessage[]>`
     select m.tx_hash, m.block_number, m.block_time, m.tx_index, m.from_addr, m.to_addr,
-           m.value_wei, m.body, m.pair_key,
+           m.value_wei, m.body, m.pair_key, m.lang, m.translation,
            lf.name as from_name, lf.kind as from_kind,
            lt.name as to_name, lt.kind as to_kind,
            0 as thread_count
@@ -77,7 +79,7 @@ export async function getAddressMessages(address: string, before?: string): Prom
   const cursor = parseCursor(before);
   return sql<FeedMessage[]>`
     select m.tx_hash, m.block_number, m.block_time, m.tx_index, m.from_addr, m.to_addr,
-           m.value_wei, m.body, m.pair_key,
+           m.value_wei, m.body, m.pair_key, m.lang, m.translation,
            lf.name as from_name, lf.kind as from_kind,
            lt.name as to_name, lt.kind as to_kind,
            (select count(*)::int from messages t
@@ -100,4 +102,33 @@ export async function getLabel(address: string): Promise<{ name: string; kind: L
 export async function getSyncedBlock(): Promise<string | null> {
   const rows = await db()`select value from sync_state where key = 'eth_last_block'`;
   return rows[0]?.value ?? null;
+}
+
+// Text search over visible messages. Matches anywhere in the body.
+export async function searchMessages(q: string, limit = PAGE_SIZE): Promise<FeedMessage[]> {
+  const sql = db();
+  const pattern = "%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%";
+  return sql<FeedMessage[]>`
+    select m.tx_hash, m.block_number, m.block_time, m.tx_index, m.from_addr, m.to_addr,
+           m.value_wei, m.body, m.pair_key, m.lang, m.translation,
+           lf.name as from_name, lf.kind as from_kind,
+           lt.name as to_name, lt.kind as to_kind,
+           (select count(*)::int from messages t
+             where t.pair_key = m.pair_key and t.status = 'visible') as thread_count
+    from messages m
+    left join labels lf on lf.address = m.from_addr
+    left join labels lt on lt.address = m.to_addr
+    where m.status = 'visible' and (m.body ilike ${pattern} or m.translation ilike ${pattern})
+    order by m.block_number desc, m.tx_index desc
+    limit ${limit}`;
+}
+
+// Labels whose name matches, for searching by "euler" or "binance".
+export async function searchLabels(q: string): Promise<{ address: string; name: string; kind: LabelKind; incident: string | null }[]> {
+  const pattern = "%" + q.replace(/[\\%_]/g, (c) => "\\" + c) + "%";
+  return db()`
+    select address, name, kind, incident from labels
+    where name ilike ${pattern}
+    order by kind = 'exploiter' desc, name
+    limit 20`;
 }

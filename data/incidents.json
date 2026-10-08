@@ -1,0 +1,12 @@
+[
+ {"slug": "euler", "name": "Euler Finance", "match": ["Euler Finance Exploiter"]},
+ {"slug": "bybit", "name": "Bybit", "match": ["Bybit Exploiter"]},
+ {"slug": "ronin", "name": "Ronin Bridge", "match": ["Ronin Bridge Exploiter"]},
+ {"slug": "kyberswap", "name": "KyberSwap", "match": ["KyberSwap Exploiter"]},
+ {"slug": "poly-network", "name": "Poly Network", "match": ["PolyNetwork Exploiter"]},
+ {"slug": "chainswap", "name": "ChainSwap", "match": ["ChainSwap Exploiter", "ChainSwap Hacker"]},
+ {"slug": "bzx", "name": "bZx", "match": ["bZx PrivKey Exploiter"]},
+ {"slug": "kucoin", "name": "KuCoin", "match": ["Kucoin Hacker"]},
+ {"slug": "yearn-ydai", "name": "Yearn yDAI", "match": ["Yearn (yDai) Exploiter"]},
+ {"slug": "bt-finance", "name": "BT.Finance", "match": ["BT.Finance Exploiter"]}
+]

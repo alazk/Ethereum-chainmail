@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Empty, MessageItem } from "../../components";
 import { cursorOf, getAddressMessages, getLabel, PAGE_SIZE } from "@/lib/queries";
 import { isAddress } from "@/lib/format";
+import { ensureSetup } from "@/lib/setup";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function AddressPage({ params, searchParams }: Props) {
   if (!isAddress(addr)) notFound();
 
   const address = addr.toLowerCase();
+  await ensureSetup();
   const [label, messages] = await Promise.all([getLabel(address), getAddressMessages(address, before)]);
   const now = new Date();
   const last = messages[messages.length - 1];

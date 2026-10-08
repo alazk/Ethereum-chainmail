@@ -19,6 +19,9 @@ const INSCRIPTION = /^data:|^\s*\{\s*"p"\s*:/i;
 // "BFX_REFILL_SWEEP". Uppercase words joined by _ : . or - with no spaces.
 const SYSTEM_TAG = /^[A-Z0-9]+(?:[_:.-][A-Z0-9]+)+$/;
 
+// A message that is nothing but a link is almost always an ad.
+const LINK_ONLY = /^(https?:\/\/|www\.|t\.me\/)\S+$/i;
+
 // Long unbroken base64 or base58 strings are payloads, not messages.
 const ENCODED_BLOB = /^[A-Za-z0-9+/=_-]{48,}$/;
 
@@ -28,6 +31,7 @@ export function classify(body: string): Verdict {
   if (INSCRIPTION.test(text)) return { status: "spam", reason: "inscription" };
   if (ENCODED_BLOB.test(text)) return { status: "spam", reason: "encoded data" };
   if (SYSTEM_TAG.test(text)) return { status: "spam", reason: "system tag" };
+  if (LINK_ONLY.test(text)) return { status: "spam", reason: "link only" };
   if (LINK.test(text) && BAIT.test(text)) return { status: "spam", reason: "phishing link" };
 
   return { status: "visible", reason: null };

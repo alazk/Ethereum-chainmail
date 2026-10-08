@@ -97,9 +97,29 @@ hacks tab.
 Start by tagging the big recent hacks and the protocol addresses that wrote
 to them. Those threads are the ones people share.
 
-## Moderation
+## Hack pages
 
-Some messages contain threats or personal details. Hide one with:
+`/hacks` lists every incident, and `/hacks/<slug>` tells its story: what the
+exploiter and the team wrote to each other, in order, with everyone else's
+messages folded away underneath. An address shows up on a hack page when its
+label has an `incident`. The seed incidents live in `data/incidents.json`.
+
+## Admin
+
+`/admin` is protected by `ADMIN_SECRET`. From there you can:
+
+- add or change labels and create new hacks (saving an exploiter or team
+  address pulls its past messages from Blockscout right away)
+- approve suggested team addresses: unlabeled addresses that wrote to an
+  exploiter and got a reply
+- review possible new hacks: unlabeled addresses that suddenly got messages
+  from many different senders
+- hide, restore or mark messages as spam
+
+Labels you add here are kept. Labels from the files in `data/` are reloaded
+whenever those files change, which overwrites edits to those same addresses.
+
+The older API endpoint still works for scripts:
 
 ```
 curl -X POST https://your-site/api/admin/hide \
@@ -108,7 +128,21 @@ curl -X POST https://your-site/api/admin/hide \
   -d '{"tx_hash": "0x...", "status": "hidden"}'
 ```
 
-`"status": "visible"` brings it back, `"spam"` marks it as spam.
+## Translation (optional)
+
+Set `ANTHROPIC_API_KEY` and each ingest run translates up to 10 non-English
+messages with Claude, hack-page messages first. Translations show under the
+original, marked as machine translations. `TRANSLATE_MODEL` changes the model.
+
+## X bot (optional)
+
+Set `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN` and `X_ACCESS_SECRET` from an
+X developer app with read and write access. Each ingest run then posts up to
+two new messages written by a labeled exploiter or team, linking to the hack
+page. Only messages from the last 6 hours are posted, so backfills never flood
+the account. `SITE_URL` sets the link base; on Vercel it defaults to the
+production domain. X's API pricing changes, so check what posting costs on
+your plan.
 
 ## How messages are found
 
@@ -124,6 +158,7 @@ Then the spam rules run. These are hidden automatically:
 - inscriptions (`data:` URIs and `{"p": ...}` JSON)
 - long encoded strings with no spaces
 - exchange and bot tags like `BFX_REFILL_SWEEP`
+- messages that are nothing but a link
 - links combined with bait words like "claim" or "airdrop"
 - the same text sent by one address to 10 or more addresses
 - the same text (20+ characters) sent by 25 or more different addresses

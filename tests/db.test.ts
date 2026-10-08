@@ -156,8 +156,9 @@ describe("database flow", () => {
 describe("first-run setup", () => {
   it("creates tables and loads labels on an empty database", async () => {
     const { db } = await import("../lib/db");
-    const { ensureSetup, allLabels } = await import("../lib/setup");
+    const { ensureSetup, allLabels, resetSetupForTests } = await import("../lib/setup");
     await db().unsafe("drop table messages; drop table labels; drop table sync_state");
+    resetSetupForTests();
     await ensureSetup();
     const [{ n }] = await db()`select count(*)::int as n from labels`;
     expect(n).toBe(allLabels().length);

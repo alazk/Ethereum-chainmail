@@ -45,6 +45,7 @@ export function MessageItem({ m, now }: { m: FeedMessage; now: Date }) {
           <time dateTime={new Date(m.block_time).toISOString()}>{timeAgo(m.block_time, now)}</time>
         </p>
         <p className="msg-body">{m.body}</p>
+        <Translation m={m} />
         <p className="msg-hex" aria-hidden="true" title="Raw transaction input">
           {asHex(m.body)}
         </p>
@@ -62,4 +63,34 @@ export function MessageItem({ m, now }: { m: FeedMessage; now: Date }) {
 
 export function Empty({ children }: { children: React.ReactNode }) {
   return <div className="empty">{children}</div>;
+}
+
+export function Translation({ m }: { m: Pick<FeedMessage, "lang" | "translation"> }) {
+  if (!m.translation) return null;
+  return (
+    <p className="msg-translation">
+      <span className="msg-translation-label">Machine translation{m.lang ? ` from ${m.lang}` : ""}</span>
+      {m.translation}
+    </p>
+  );
+}
+
+export function Toolbar({ current, right }: { current: "all" | "hacks" | "search"; right?: React.ReactNode }) {
+  return (
+    <nav className="toolbar" aria-label="Sections">
+      <ul className="filters">
+        <li>
+          <Link href="/" aria-current={current === "all" ? "page" : undefined}>
+            Everything
+          </Link>
+        </li>
+        <li>
+          <Link href="/hacks" aria-current={current === "hacks" ? "page" : undefined}>
+            Hacks
+          </Link>
+        </li>
+      </ul>
+      {right}
+    </nav>
+  );
 }

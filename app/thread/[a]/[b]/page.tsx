@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Empty, EtherscanLink, Party } from "../../../components";
+import { Empty, EtherscanLink, Party, Translation } from "../../../components";
+import { ensureSetup } from "@/lib/setup";
 import { getThread } from "@/lib/queries";
 import { ethValue, isAddress } from "@/lib/format";
 
@@ -12,6 +13,7 @@ export default async function Thread({ params }: Props) {
   const { a, b } = await params;
   if (!isAddress(a) || !isAddress(b)) notFound();
 
+  await ensureSetup();
   const messages = await getThread(a, b);
   if (messages.length === 0) {
     return (
@@ -60,6 +62,7 @@ export default async function Thread({ params }: Props) {
               </p>
               <div className="turn-bubble">
                 <p className="msg-body">{m.body}</p>
+                <Translation m={m} />
                 <p className="msg-foot">
                   {value && <span className="value">Sent {value}</span>}
                   <EtherscanLink hash={m.tx_hash} />

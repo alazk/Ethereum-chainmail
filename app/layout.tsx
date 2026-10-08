@@ -25,6 +25,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Chainmail
             </Link>
             <p className="tagline">Messages people write inside Ethereum transactions, as they land.</p>
+            <form action="/search" method="get" className="search" role="search">
+              <label htmlFor="q" className="visually-hidden">
+                Search messages, names or addresses
+              </label>
+              <input id="q" name="q" type="search" placeholder="Search messages, names or addresses" autoComplete="off" />
+            </form>
           </header>
           {children}
           <footer className="colophon">
