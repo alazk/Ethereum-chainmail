@@ -1,0 +1,71 @@
+# Fills in history by calling the deployed backfill endpoint until it's done.
+# Uses the same CHAINMAIL_URL and CRON_SECRET secrets as the ingest workflow.
+#
+# mode "labels": every message to or from a labeled exploiter, all time.
+#   Takes a minute or two.
+# mode "recent": every message from the last N days, walking backwards one
+#   chunk of blocks per call. Roughly 7,200 blocks per day of history; each
+#   job runs up to ~5.5 hours and the endpoint remembers where it stopped, so
+#   run it again if it doesn't finish.
+name: backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "labels or recent"
+        required: true
+        default: "labels"
+        type: choice
+        options: [labels, recent]
+      days:
+        description: "For recent: how many days back"
+        required: false
+        default: "30"
+      blocks:
+        description: "For recent: blocks per call"
+        required: false
+        default: "600"
+
+concurrency:
+  group: backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - name: Run backfill
+        env:
+          CHAINMAIL_URL: ${{ secrets.CHAINMAIL_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          MODE: ${{ inputs.mode }}
+          DAYS: ${{ inputs.days }}
+          BLOCKS: ${{ inputs.blocks }}
+        run: |
+          call() {
+            curl -sS --fail-with-body --max-time 295 -X POST \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$CHAINMAIL_URL/api/cron/backfill?mode=$MODE&days=$DAYS&blocks=$BLOCKS"
+          }
+          if [ "$MODE" = "labels" ]; then
+            call
+            exit $?
+          fi
+          deadline=$(( $(date +%s) + 5*3600 + 1800 ))
+          failures=0
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            if body=$(call); then
+              failures=0
+              echo "$body"
+              remaining=$(echo "$body" | jq -r '.remaining // "0"')
+              if [ "$remaining" = "0" ]; then echo "Done."; exit 0; fi
+            else
+              failures=$((failures + 1))
+              echo "call failed ($failures): $body"
+              if [ "$failures" -ge 5 ]; then exit 1; fi
+              sleep 30
+            fi
+          done
+          echo "Time limit reached. Run the workflow again to continue."

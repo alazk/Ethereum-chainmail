@@ -65,16 +65,21 @@ a commit. If the feed stops moving, re-enable the workflow in the Actions tab.
 
 ## Backfill history
 
-The indexer only reads new blocks. To launch with history, run
-`backfill/exploiters.sql` (every message to or from a labeled exploiter) and
-`backfill/recent.sql` (everything from the last year) on Google BigQuery's
-free public Ethereum dataset, save the results as CSV, and import them:
+The indexer only reads new blocks. The `backfill` GitHub Action fills in the
+past through the deployed app, using the same two secrets as the ingest
+Action. Run it from the Actions tab:
 
-```
-npm run backfill:import -- backfill/recent.csv
-```
+- **mode `labels`** pulls every message ever sent to or from a labeled
+  exploiter, from Blockscout's free API. This fills the hacks tab. Takes a
+  minute or two.
+- **mode `recent`** walks back block by block for the number of days you
+  pick (default 30), through your RPC key. About 7,200 blocks per day of
+  history; 30 days takes a few hours and a few million Alchemy compute units.
+  The app remembers where it stopped, so re-running continues the walk.
 
-Details and cost notes are in [backfill/README.md](backfill/README.md).
+For deeper history without spending RPC quota, `backfill/` also has BigQuery
+queries and `npm run backfill:import` loads their CSV exports. See
+[backfill/README.md](backfill/README.md).
 
 ## Labels
 
