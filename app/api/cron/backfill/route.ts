@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 import { hasBearer } from "@/lib/auth";
 import { backfillLabels, backfillRecent } from "@/lib/backfill";
+import { db } from "@/lib/db";
+
+async function logRun(mode: string, result: unknown) {
+  try {
+    await db()`create table if not exists backfill_runs (
+      id bigserial primary key, at timestamptz not null default now(), mode text not null, result jsonb not null)`;
+    await db()`insert into backfill_runs (mode, result) values (${mode}, ${db().json(result as never)})`;
+  } catch (err) {
+    console.error("could not log backfill run", err);
+  }
+}
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -17,13 +28,18 @@ export async function POST(request: Request) {
 
   try {
     if (mode === "labels") {
-      return NextResponse.json(await backfillLabels());
+      const result = await backfillLabels();
+      await logRun(mode, result);
+      return NextResponse.json(result);
     }
     const days = Math.min(Math.max(Number(q.get("days")) || 30, 1), 365);
     const blocks = Math.min(Math.max(Number(q.get("blocks")) || 600, 10), 3000);
-    return NextResponse.json(await backfillRecent(days, blocks));
+    const result = await backfillRecent(days, blocks);
+    await logRun(mode, { days, ...result });
+    return NextResponse.json(result);
   } catch (err) {
     console.error("backfill failed", err);
+    await logRun(mode, { error: (err as Error).message });
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }

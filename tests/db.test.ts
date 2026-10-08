@@ -164,3 +164,25 @@ describe("first-run setup", () => {
     expect(n).toBeGreaterThan(400);
   });
 });
+
+describe("repeat rule", () => {
+  it("keeps the first copy when a sender repeats a message to the same address", async () => {
+    const { db } = await import("../lib/db");
+    const { extractMessage } = await import("../lib/extract");
+    const { insertMessages } = await import("../lib/store");
+    const { sweepSpam } = await import("../lib/spam-sweep");
+    const hexOf = (s: string) => "0x" + Buffer.from(s, "utf8").toString("hex");
+    const rows = [1, 2, 3].map((i) =>
+      extractMessage({
+        hash: "0x" + (0xdead00 + i).toString(16).padStart(64, "0"),
+        blockNumber: 30_000_000 + i, blockTime: new Date(), index: 0,
+        from: "0x" + "9".repeat(40), to: "0x" + "8".repeat(40), value: 0n,
+        input: hexOf("send me some ETH, pls"),
+      })!,
+    );
+    await insertMessages(rows);
+    expect(await sweepSpam(["0x" + "9".repeat(40)])).toBe(2);
+    const visible = await db()`select tx_hash from messages where from_addr = ${"0x" + "9".repeat(40)} and status = 'visible'`;
+    expect(visible.map((r) => r.tx_hash)).toEqual([rows[0].tx_hash]);
+  });
+});

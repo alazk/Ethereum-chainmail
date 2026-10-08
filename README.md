@@ -127,6 +127,7 @@ Then the spam rules run. These are hidden automatically:
 - links combined with bait words like "claim" or "airdrop"
 - the same text sent by one address to 10 or more addresses
 - the same text (20+ characters) sent by 25 or more different addresses
+- repeats of a message the same sender already sent to the same address
 
 The rules live in `lib/decode.ts`, `lib/classify.ts` and
 `lib/spam-sweep.ts`. After changing them, `npm run spam:rescan` reapplies the

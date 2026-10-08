@@ -35,6 +35,14 @@ create table if not exists labels (
   source  text
 );
 
+-- One row per backfill call, so results can be checked from the database.
+create table if not exists backfill_runs (
+  id     bigserial primary key,
+  at     timestamptz not null default now(),
+  mode   text not null,
+  result jsonb not null
+);
+
 -- Ingest cursor and other small counters.
 create table if not exists sync_state (
   key   text primary key,

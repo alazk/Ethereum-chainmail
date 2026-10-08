@@ -177,6 +177,7 @@ export type LabelBackfillResult = {
   found: number;
   inserted: number;
   errors: string[];
+  perAddress: Record<string, { transactions: number; messages: number }>;
 };
 
 export async function backfillLabels(kinds: string[] = ["exploiter"]): Promise<LabelBackfillResult> {
@@ -184,17 +185,22 @@ export async function backfillLabels(kinds: string[] = ["exploiter"]): Promise<L
   const labels = await db()<{ address: string }[]>`
     select address from labels where kind = any(${kinds}) order by address`;
 
-  const result: LabelBackfillResult = { addresses: labels.length, transactions: 0, found: 0, inserted: 0, errors: [] };
+  const result: LabelBackfillResult = {
+    addresses: labels.length, transactions: 0, found: 0, inserted: 0, errors: [], perAddress: {},
+  };
   for (const { address } of labels) {
     try {
       const rows: MessageRow[] = [];
+      let seen = 0;
       for (let page = 1; page <= MAX_PAGES; page++) {
         const txs = await scoutPage(address, page);
+        seen += txs.length;
         result.transactions += txs.length;
         rows.push(...messagesFromScout(txs));
         if (txs.length < PAGE_SIZE) break;
       }
       result.found += rows.length;
+      result.perAddress[address] = { transactions: seen, messages: rows.length };
       result.inserted += await insertMessages(rows);
       const senders = [...new Set(rows.map((r) => r.from_addr))];
       if (senders.length) await sweepSpam(senders);

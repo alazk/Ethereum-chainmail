@@ -35,5 +35,17 @@ export async function sweepSpam(senders?: string[]): Promise<number> {
     ) s
     where m.status = 'visible' and m.body_hash = s.body_hash`;
 
-  return blasts.count + farms.count;
+  // One sender, same text, same recipient, again and again (one address sent
+  // the same line to the Bybit exploiter 1,225 times). Keep the first copy.
+  const repeats = await sql`
+    update messages m set status = 'spam', spam_reason = 'repeat of an earlier message'
+    where m.status = 'visible'
+      ${scope ? sql`and m.from_addr = any(${senders!})` : sql``}
+      and exists (
+        select 1 from messages e
+        where e.from_addr = m.from_addr and e.to_addr = m.to_addr and e.body_hash = m.body_hash
+          and (e.block_number, e.tx_index) < (m.block_number, m.tx_index)
+      )`;
+
+  return blasts.count + farms.count + repeats.count;
 }
