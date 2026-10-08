@@ -1,0 +1,6 @@
+[
+ {"address": "0xb66cd966670d962c227b3eaba30a872dbfb995db", "name": "Euler Finance Exploiter 2", "kind": "exploiter", "source": "Etherscan name tag, checked 2026-10-08"},
+ {"address": "0x5f259d0b76665c337c6104145894f4d1d2758b8c", "name": "Euler Finance Exploiter 3", "kind": "exploiter", "source": "Etherscan name tag, checked 2026-10-08"},
+ {"address": "0x47666fab8bd0ac7003bce3f5c3585383f09486e2", "name": "Bybit Exploiter 1", "kind": "exploiter", "source": "Etherscan name tag, checked 2026-10-08"},
+ {"address": "0x50275e0b7261559ce1644014d4b78d4aa63be836", "name": "KyberSwap Exploiter 1", "kind": "exploiter", "source": "Etherscan name tag, checked 2026-10-08"}
+]

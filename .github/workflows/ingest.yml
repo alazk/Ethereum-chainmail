@@ -1,0 +1,39 @@
+# Pulls new blocks every 5 minutes by calling the deployed ingest endpoint.
+# Needs two repository secrets: CHAINMAIL_URL (e.g. https://chainmail.vercel.app)
+# and CRON_SECRET (same value as in Vercel).
+#
+# GitHub may delay scheduled runs during busy periods; the endpoint catches up
+# by itself, and this job keeps calling it until it reports it's caught up.
+name: ingest
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Call ingest until caught up
+        env:
+          CHAINMAIL_URL: ${{ secrets.CHAINMAIL_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CHAINMAIL_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Set the CHAINMAIL_URL and CRON_SECRET repository secrets first."
+            exit 0
+          fi
+          for i in 1 2 3 4 5 6; do
+            body=$(curl -sS --fail-with-body --max-time 290 -X POST \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$CHAINMAIL_URL/api/cron/ingest")
+            echo "$body"
+            behind=$(echo "$body" | jq -r '.behind // "0"')
+            if [ "$behind" = "0" ]; then break; fi
+          done
