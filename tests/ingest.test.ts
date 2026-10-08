@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Block } from "viem";
 import { messagesFromBlock } from "../lib/ingest";
-import { parseTimestamp, parseWei } from "../scripts/import-backfill";
+import { inputOf, parseTimestamp, parseWei } from "../scripts/import-backfill";
 
 const hex = (s: string) => ("0x" + Buffer.from(s, "utf8").toString("hex")) as `0x${string}`;
 
@@ -37,6 +37,12 @@ describe("backfill parsing", () => {
     expect(parseTimestamp("2023-03-13 08:50:23 UTC").toISOString()).toBe("2023-03-13T08:50:23.000Z");
     expect(parseTimestamp("2023-03-13 08:50:23.000 UTC").toISOString()).toBe("2023-03-13T08:50:23.000Z");
     expect(parseTimestamp("1678697423").toISOString()).toBe("2023-03-13T08:50:23.000Z");
+  });
+
+  it("accepts raw input or decoded body", () => {
+    expect(inputOf({ input: "0x6869" })).toBe("0x6869");
+    expect(inputOf({ body: "hi" })).toBe("0x6869");
+    expect(inputOf({})).toBe("0x");
   });
 
   it("reads wei values", () => {

@@ -2,7 +2,8 @@
 // Usage: npm run backfill:import -- backfill/messages.csv
 //
 // Expected columns: hash, block_number, block_timestamp, transaction_index,
-// from_address, to_address, value, input
+// from_address, to_address, value, and either input (raw hex calldata) or
+// body (already decoded text, as the queries in backfill/ produce).
 import "./env";
 import { createReadStream } from "node:fs";
 import { parse } from "csv-parse";
@@ -19,6 +20,12 @@ export function parseTimestamp(raw: string): Date {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) throw new Error(`Can't read timestamp "${raw}"`);
   return d;
+}
+
+export function inputOf(rec: Record<string, string>): string {
+  if (rec.input) return rec.input;
+  if (rec.body) return "0x" + Buffer.from(rec.body, "utf8").toString("hex");
+  return "0x";
 }
 
 export function parseWei(raw: string): string {
@@ -55,7 +62,7 @@ async function main() {
       from: rec.from_address,
       to: rec.to_address || null,
       value: parseWei(rec.value),
-      input: rec.input,
+      input: inputOf(rec),
     });
     if (row) {
       kept++;

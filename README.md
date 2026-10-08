@@ -65,12 +65,13 @@ a commit. If the feed stops moving, re-enable the workflow in the Actions tab.
 
 ## Backfill history
 
-The indexer only reads new blocks. To launch with years of past messages,
-run the query in `backfill/bigquery.sql` on Google BigQuery's free public
-Ethereum dataset, export the result as CSV, and import it:
+The indexer only reads new blocks. To launch with history, run
+`backfill/exploiters.sql` (every message to or from a labeled exploiter) and
+`backfill/recent.sql` (everything from the last year) on Google BigQuery's
+free public Ethereum dataset, save the results as CSV, and import them:
 
 ```
-npm run backfill:import -- backfill/messages.csv
+npm run backfill:import -- backfill/recent.csv
 ```
 
 Details and cost notes are in [backfill/README.md](backfill/README.md).
