@@ -38,8 +38,11 @@ first. The backfill below fixes that.
    [Supabase](https://supabase.com). Copy the pooled connection string.
 2. **RPC.** Get a mainnet URL from Alchemy, QuickNode or Infura. The indexer
    makes one call per block, a few thousand calls a day.
-3. **Tables.** With that `DATABASE_URL` in `.env.local`, run
-   `npm run db:migrate` and `npm run db:seed-labels` once from your machine.
+3. **Tables.** Either paste `db/setup.sql` into your database's SQL editor
+   and run it, or put `DATABASE_URL` in `.env.local` and run
+   `npm run db:migrate` and `npm run db:seed-labels` from your machine.
+   After editing labels, regenerate the file with
+   `npx tsx scripts/build-setup-sql.ts`.
 4. **Vercel.** Import this repo and set four environment variables:
    `DATABASE_URL`, `ETH_RPC_URL`, `CRON_SECRET` and `ADMIN_SECRET` (any long
    random strings for the last two). Deploy.
