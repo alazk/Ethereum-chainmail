@@ -31,7 +31,7 @@ async function call<T>(url: string, body: unknown): Promise<T> {
   }
 }
 
-type RpcResponse<T> = { id: number; result?: T; error?: { message: string } };
+type RpcResponse<T> = { id: number; result?: T; error?: { code?: number; message: string } };
 
 export async function rpcBlockNumber(url: string): Promise<bigint> {
   const res = await call<RpcResponse<string>>(url, { jsonrpc: "2.0", id: nextId++, method: "eth_blockNumber", params: [] });
@@ -39,20 +39,35 @@ export async function rpcBlockNumber(url: string): Promise<bigint> {
   return BigInt(res.result);
 }
 
-// Fetches blocks with full transactions in one batch request.
+// Providers report rate limits inside a batch as per-item errors, with HTTP 200.
+function isRateLimit(err: { code?: number; message: string } | undefined): boolean {
+  return !!err && (err.code === 429 || /rate|capacity|too many|compute units per second/i.test(err.message));
+}
+
+// Fetches blocks with full transactions in one batch request. Items the
+// provider rate-limited are retried with a growing pause.
 export async function rpcBlocks(url: string, numbers: bigint[]): Promise<RpcBlock[]> {
-  if (numbers.length === 0) return [];
-  const reqs = numbers.map((n) => ({
-    jsonrpc: "2.0",
-    id: nextId++,
-    method: "eth_getBlockByNumber",
-    params: ["0x" + n.toString(16), true],
-  }));
-  const res = await call<RpcResponse<RpcBlock>[]>(url, reqs);
-  const byId = new Map(res.map((r) => [r.id, r]));
-  return reqs.map((req) => {
-    const r = byId.get(req.id);
-    if (!r?.result) throw new Error(`Block ${BigInt(req.params[0] as string)}: ${r?.error?.message ?? "missing"}`);
-    return r.result;
-  });
+  const out = new Map<bigint, RpcBlock>();
+  let pending = numbers;
+  for (let attempt = 0; pending.length > 0; attempt++) {
+    const reqs = pending.map((n) => ({
+      jsonrpc: "2.0",
+      id: nextId++,
+      method: "eth_getBlockByNumber",
+      params: ["0x" + n.toString(16), true],
+      n,
+    }));
+    const res = await call<RpcResponse<RpcBlock>[]>(url, reqs.map(({ n: _n, ...r }) => r));
+    const byId = new Map(res.map((r) => [r.id, r]));
+    const retry: bigint[] = [];
+    for (const req of reqs) {
+      const r = byId.get(req.id);
+      if (r?.result) out.set(req.n, r.result);
+      else if ((isRateLimit(r?.error) || !r) && attempt < 6) retry.push(req.n);
+      else throw new Error(`Block ${req.n}: ${r?.error?.message ?? "missing"}`);
+    }
+    pending = retry;
+    if (pending.length) await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+  }
+  return numbers.map((n) => out.get(n)!);
 }

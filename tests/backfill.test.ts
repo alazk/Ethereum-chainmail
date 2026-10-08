@@ -16,6 +16,7 @@ let pg: PGlite;
 let server: PGLiteSocketServer;
 let fake: http.Server;
 let rpcCalls = 0;
+const limitOnce = new Set<number>(); // blocks that answer "rate limited" the first time
 
 function block(n: number) {
   const txs = [
@@ -58,6 +59,10 @@ beforeAll(async () => {
       const p = JSON.parse(body);
       const one = (r: { id: number; method: string; params: string[] }) => {
         rpcCalls++;
+        const n = r.method === "eth_getBlockByNumber" ? parseInt(r.params[0], 16) : -1;
+        if (limitOnce.delete(n)) {
+          return { jsonrpc: "2.0", id: r.id, error: { code: 429, message: "Your app has exceeded its compute units per second capacity." } };
+        }
         return { jsonrpc: "2.0", id: r.id, result: r.method === "eth_blockNumber" ? h(HEAD, 1) : block(parseInt(r.params[0], 16)) };
       };
       res.end(JSON.stringify(Array.isArray(p) ? p.map(one) : one(p)));
@@ -133,5 +138,16 @@ describe("backfillLabels resuming", () => {
     expect(rest).toMatchObject({ done: 17, remaining: 0 });
     const after = await backfillLabels();
     expect(after).toMatchObject({ done: 17, remaining: 0, found: 0 });
+  });
+});
+
+describe("rpcBlocks", () => {
+  it("retries blocks the provider rate-limited inside a batch", async () => {
+    const { rpcBlocks } = await import("../lib/rpc");
+    limitOnce.add(500_001);
+    limitOnce.add(500_003);
+    const blocks = await rpcBlocks(process.env.ETH_RPC_URL!, [500_000n, 500_001n, 500_002n, 500_003n]);
+    expect(blocks.map((b) => parseInt(b.number, 16))).toEqual([500_000, 500_001, 500_002, 500_003]);
+    expect(limitOnce.size).toBe(0);
   });
 });

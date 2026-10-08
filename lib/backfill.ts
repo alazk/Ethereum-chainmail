@@ -81,7 +81,9 @@ export async function backfillRecent(days: number, maxBlocks: number): Promise<B
 
   // A few batches in flight at once; stays well under typical RPC rate limits.
   const rows: MessageRow[] = [];
-  const PARALLEL = 3;
+  // One batch at a time: free RPC tiers cap compute per second, and a
+  // rate-limited batch costs more time in retries than it saves.
+  const PARALLEL = Number(process.env.BACKFILL_PARALLEL ?? 1);
   for (let i = 0; i < numbers.length; i += BATCH * PARALLEL) {
     const groups: bigint[][] = [];
     for (let j = 0; j < PARALLEL; j++) {
