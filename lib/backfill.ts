@@ -120,10 +120,6 @@ const MAX_PAGES = 10;
 const SCOUT_GAP_MS = Number(process.env.BLOCKSCOUT_GAP_MS ?? 1500);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let lastScoutCall = 0;
-// Blockscout's free API rate-limits hard. Space requests out.
-const SCOUT_GAP_MS = Number(process.env.BLOCKSCOUT_GAP_MS ?? 1500);
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-let lastScoutCall = 0;
 
 type ScoutTx = {
   hash: string;
