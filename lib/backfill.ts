@@ -147,9 +147,10 @@ async function scoutPage(address: string, page: number): Promise<ScoutTx[]> {
     if (wait > 0) await sleep(wait);
     lastScoutCall = Date.now();
     const res = await fetch(u, { headers: { accept: "application/json" } });
-    if ((res.status === 429 || res.status >= 500) && attempt < 6) {
+    if ((res.status === 429 || res.status >= 500) && attempt < 4) {
       const retryAfter = Number(res.headers.get("retry-after"));
-      await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2000 * 2 ** attempt);
+      const ms = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2000 * 2 ** attempt;
+      await sleep(Math.min(ms, 20_000));
       continue;
     }
     if (!res.ok) throw new Error(`Blockscout HTTP ${res.status} for ${address}`);
@@ -181,6 +182,8 @@ export function messagesFromScout(txs: ScoutTx[]): MessageRow[] {
 
 export type LabelBackfillResult = {
   addresses: number;
+  done: number;
+  remaining: number;
   transactions: number;
   found: number;
   inserted: number;
@@ -188,33 +191,72 @@ export type LabelBackfillResult = {
   perAddress: Record<string, { transactions: number; messages: number }>;
 };
 
-export async function backfillLabels(kinds: string[] = ["exploiter"]): Promise<LabelBackfillResult> {
+const LABELS_NEXT_KEY = "labels_backfill_next"; // index of the next address to fetch
+const LABELS_FAIL_KEY = "labels_backfill_fails"; // failed calls in a row on that address
+const MAX_FAILS = 3;
+
+// Works through the labeled addresses a few at a time, saving its place, so
+// each call stays well inside the host's request time limit. Call it again
+// until `remaining` is 0. `restart` starts over from the first address.
+export async function backfillLabels(
+  opts: { kinds?: string[]; budgetMs?: number; restart?: boolean } = {},
+): Promise<LabelBackfillResult> {
+  const kinds = opts.kinds ?? ["exploiter"];
+  const budgetMs = opts.budgetMs ?? 150_000;
+  const started = Date.now();
   await ensureSetup();
+
   const labels = await db()<{ address: string }[]>`
     select address from labels where kind = any(${kinds}) order by address`;
+  if (opts.restart) {
+    await setState(LABELS_NEXT_KEY, 0n);
+    await setState(LABELS_FAIL_KEY, 0n);
+  }
+  let next = Number((await getState(LABELS_NEXT_KEY)) ?? 0n);
+  let fails = Number((await getState(LABELS_FAIL_KEY)) ?? 0n);
 
   const result: LabelBackfillResult = {
-    addresses: labels.length, transactions: 0, found: 0, inserted: 0, errors: [], perAddress: {},
+    addresses: labels.length, done: next, remaining: Math.max(labels.length - next, 0),
+    transactions: 0, found: 0, inserted: 0, errors: [], perAddress: {},
   };
-  for (const { address } of labels) {
+
+  // Always try at least one address, then keep going while time allows.
+  while (next < labels.length && (result.done === next || Date.now() - started < budgetMs)) {
+    const { address } = labels[next];
     try {
       const rows: MessageRow[] = [];
       let seen = 0;
       for (let page = 1; page <= MAX_PAGES; page++) {
         const txs = await scoutPage(address, page);
         seen += txs.length;
-        result.transactions += txs.length;
         rows.push(...messagesFromScout(txs));
         if (txs.length < PAGE_SIZE) break;
       }
+      result.transactions += seen;
       result.found += rows.length;
       result.perAddress[address] = { transactions: seen, messages: rows.length };
       result.inserted += await insertMessages(rows);
       const senders = [...new Set(rows.map((r) => r.from_addr))];
       if (senders.length) await sweepSpam(senders);
+      next++;
+      fails = 0;
     } catch (err) {
       result.errors.push((err as Error).message);
+      fails++;
+      // Give up on an address after a few failed calls so it can't block the rest.
+      if (fails >= MAX_FAILS) {
+        next++;
+        fails = 0;
+      }
+      await setState(LABELS_NEXT_KEY, BigInt(next));
+      await setState(LABELS_FAIL_KEY, BigInt(fails));
+      break; // let the next call retry after a pause
     }
+    await setState(LABELS_NEXT_KEY, BigInt(next));
+    await setState(LABELS_FAIL_KEY, BigInt(fails));
   }
+
+  result.done = next;
+  result.remaining = Math.max(labels.length - next, 0);
   return result;
 }

@@ -2,7 +2,8 @@
 # Uses the same CHAINMAIL_URL and CRON_SECRET secrets as the ingest workflow.
 #
 # mode "labels": every message to or from a labeled exploiter, all time.
-#   Takes a minute or two.
+#   Starts from the first address and works through a few per call; takes a
+#   few minutes because Blockscout's free API has to be called slowly.
 # mode "recent": every message from the last N days, walking backwards one
 #   chunk of blocks per call. Roughly 7,200 blocks per day of history; each
 #   job runs up to ~5.5 hours and the endpoint remembers where it stopped, so
@@ -47,20 +48,21 @@ jobs:
           call() {
             curl -sS --fail-with-body --max-time 295 -X POST \
               -H "Authorization: Bearer $CRON_SECRET" \
-              "$CHAINMAIL_URL/api/cron/backfill?mode=$MODE&days=$DAYS&blocks=$BLOCKS"
+              "$CHAINMAIL_URL/api/cron/backfill?mode=$MODE&days=$DAYS&blocks=$BLOCKS$1"
           }
-          if [ "$MODE" = "labels" ]; then
-            call
-            exit $?
-          fi
+          # Labels mode starts over from the first address on each run.
+          extra=""
+          if [ "$MODE" = "labels" ]; then extra="&restart=1"; fi
           deadline=$(( $(date +%s) + 5*3600 + 1800 ))
           failures=0
           while [ "$(date +%s)" -lt "$deadline" ]; do
-            if body=$(call); then
+            if body=$(call "$extra"); then
+              extra=""
               failures=0
               echo "$body"
-              remaining=$(echo "$body" | jq -r '.remaining // "0"')
+              remaining=$(echo "$body" | jq -r '.remaining // 0 | tostring')
               if [ "$remaining" = "0" ]; then echo "Done."; exit 0; fi
+              if [ "$MODE" = "labels" ]; then sleep 5; fi
             else
               failures=$((failures + 1))
               echo "call failed ($failures): $body"

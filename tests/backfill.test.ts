@@ -110,13 +110,28 @@ describe("backfillLabels", () => {
   it("pulls exploiter history from Blockscout", async () => {
     const { backfillLabels } = await import("../lib/backfill");
     const { getFeed } = await import("../lib/queries");
-    const r = await backfillLabels();
+    const r = await backfillLabels({ restart: true });
     expect(r.errors).toEqual([]);
+    expect(r.remaining).toBe(0);
     expect(r.addresses).toBe(17);
     expect(r.found).toBe(17); // the fake API answers the same for every address
     expect(r.inserted).toBe(1);
     const hacks = await getFeed("hacks");
     expect(hacks.map((m) => m.body)).toEqual(["We'd like to talk about returning the funds."]);
     expect(hacks[0].to_name).toBe("Euler Finance Exploiter 2");
+  });
+});
+
+describe("backfillLabels resuming", () => {
+  it("does one address per call when out of time, then picks up where it stopped", async () => {
+    const { backfillLabels } = await import("../lib/backfill");
+    const first = await backfillLabels({ restart: true, budgetMs: 0 });
+    expect(first).toMatchObject({ addresses: 17, done: 1, remaining: 16 });
+    const second = await backfillLabels({ budgetMs: 0 });
+    expect(second).toMatchObject({ done: 2, remaining: 15 });
+    const rest = await backfillLabels();
+    expect(rest).toMatchObject({ done: 17, remaining: 0 });
+    const after = await backfillLabels();
+    expect(after).toMatchObject({ done: 17, remaining: 0, found: 0 });
   });
 });

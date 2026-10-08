@@ -17,7 +17,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 // POST /api/cron/backfill?mode=recent&days=30&blocks=600
-// POST /api/cron/backfill?mode=labels
+// POST /api/cron/backfill?mode=labels            (repeat until remaining is 0)
+// POST /api/cron/backfill?mode=labels&restart=1  (start over from the first address)
 // Header: Authorization: Bearer $CRON_SECRET
 export async function POST(request: Request) {
   if (!hasBearer(request, process.env.CRON_SECRET)) {
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
 
   try {
     if (mode === "labels") {
-      const result = await backfillLabels();
+      const result = await backfillLabels({ restart: q.get("restart") === "1" });
       await logRun(mode, result);
       return NextResponse.json(result);
     }
