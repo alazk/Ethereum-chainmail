@@ -117,6 +117,7 @@ Then the spam rules run. These are hidden automatically:
 
 - inscriptions (`data:` URIs and `{"p": ...}` JSON)
 - long encoded strings with no spaces
+- exchange and bot tags like `BFX_REFILL_SWEEP`
 - links combined with bait words like "claim" or "airdrop"
 - the same text sent by one address to 10 or more addresses
 - the same text (20+ characters) sent by 25 or more different addresses

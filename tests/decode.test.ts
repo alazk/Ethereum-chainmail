@@ -77,6 +77,13 @@ describe("classify", () => {
     expect(classify('{"p":"erc-20","op":"mint"}').reason).toBe("inscription");
   });
 
+  it("flags exchange and bot tags but keeps short shouts", () => {
+    expect(classify("BFX_REFILL_SWEEP").reason).toBe("system tag");
+    expect(classify("HOT-WALLET:REFILL").reason).toBe("system tag");
+    expect(classify("GM").status).toBe("visible");
+    expect(classify("RETURN THE FUNDS").status).toBe("visible");
+  });
+
   it("flags long encoded payloads", () => {
     expect(classify("QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdGQmYwAPJz").reason).toBe("encoded data");
   });
