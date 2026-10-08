@@ -116,6 +116,10 @@ export async function backfillRecent(days: number, maxBlocks: number): Promise<B
 const BLOCKSCOUT = process.env.BLOCKSCOUT_API ?? "https://eth.blockscout.com/api";
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 10;
+// Blockscout's free API rate-limits hard. Space requests out.
+const SCOUT_GAP_MS = Number(process.env.BLOCKSCOUT_GAP_MS ?? 1500);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+let lastScoutCall = 0;
 
 type ScoutTx = {
   hash: string;
@@ -139,9 +143,13 @@ async function scoutPage(address: string, page: number): Promise<ScoutTx[]> {
     sort: "asc",
   }).toString();
   for (let attempt = 0; ; attempt++) {
+    const wait = lastScoutCall + SCOUT_GAP_MS - Date.now();
+    if (wait > 0) await sleep(wait);
+    lastScoutCall = Date.now();
     const res = await fetch(u, { headers: { accept: "application/json" } });
-    if ((res.status === 429 || res.status >= 500) && attempt < 4) {
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+    if ((res.status === 429 || res.status >= 500) && attempt < 6) {
+      const retryAfter = Number(res.headers.get("retry-after"));
+      await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2000 * 2 ** attempt);
       continue;
     }
     if (!res.ok) throw new Error(`Blockscout HTTP ${res.status} for ${address}`);

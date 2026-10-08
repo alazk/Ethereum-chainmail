@@ -70,6 +70,7 @@ beforeAll(async () => {
   process.env.DATABASE_POOL_SIZE = "1";
   process.env.ETH_RPC_URL = `http://127.0.0.1:${port}/`;
   process.env.BLOCKSCOUT_API = `http://127.0.0.1:${port}/api`;
+  process.env.BLOCKSCOUT_GAP_MS = "0";
 });
 
 afterAll(async () => {
