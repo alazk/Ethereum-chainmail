@@ -3,6 +3,7 @@ import { mainnet } from "viem/chains";
 import { extractMessage, type MessageRow } from "./extract";
 import { getCursor, insertMessages, setCursor } from "./store";
 import { sweepSpam } from "./spam-sweep";
+import { ensureSetup } from "./setup";
 
 // Stay a couple of blocks behind the head so reorgs rarely touch us.
 const CONFIRMATIONS = 2n;
@@ -46,6 +47,7 @@ export function messagesFromBlock(block: Block<bigint, true>): MessageRow[] {
 }
 
 export async function ingest(maxBlocks = DEFAULT_MAX_BLOCKS): Promise<IngestResult> {
+  await ensureSetup();
   const rpc = client();
   const head = (await rpc.getBlockNumber()) - CONFIRMATIONS;
 

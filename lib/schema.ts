@@ -1,6 +1,6 @@
--- Chainmail schema. Safe to run more than once.
--- All addresses are stored lowercase.
-
+// Database schema. Every statement is safe to run more than once.
+// All addresses are stored lowercase.
+export const SCHEMA = `
 create table if not exists messages (
   tx_hash      text primary key,
   block_number bigint      not null,
@@ -40,3 +40,4 @@ create table if not exists sync_state (
   key   text primary key,
   value bigint not null
 );
+`;

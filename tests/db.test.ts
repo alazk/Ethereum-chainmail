@@ -1,7 +1,5 @@
 // Runs the real schema, inserts, spam sweep and feed queries against an
 // in-process Postgres (PGlite), so no database server is needed.
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
@@ -28,7 +26,8 @@ beforeAll(async () => {
   process.env.ADMIN_SECRET = "admin-secret";
 
   const { db } = await import("../lib/db");
-  await db().unsafe(readFileSync(join(process.cwd(), "db/schema.sql"), "utf8"));
+  const { applySchema } = await import("../lib/setup");
+  await applySchema();
   await db()`insert into labels (address, name, kind) values
     (${EXPLOITER}, 'Euler Finance Exploiter 2', 'exploiter'),
     (${PROTOCOL}, 'Acme Protocol', 'protocol')`;
@@ -151,5 +150,17 @@ describe("database flow", () => {
     const { GET } = await import("../app/api/cron/ingest/route");
     const res = await GET(new Request("http://x/api/cron/ingest"));
     expect(res.status).toBe(401);
+  });
+});
+
+describe("first-run setup", () => {
+  it("creates tables and loads labels on an empty database", async () => {
+    const { db } = await import("../lib/db");
+    const { ensureSetup, allLabels } = await import("../lib/setup");
+    await db().unsafe("drop table messages; drop table labels; drop table sync_state");
+    await ensureSetup();
+    const [{ n }] = await db()`select count(*)::int as n from labels`;
+    expect(n).toBe(allLabels().length);
+    expect(n).toBeGreaterThan(400);
   });
 });

@@ -1,11 +1,9 @@
 import "./env";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { db } from "../lib/db";
+import { applySchema } from "../lib/setup";
 
 async function main() {
-  const schema = readFileSync(join(process.cwd(), "db/schema.sql"), "utf8");
-  await db().unsafe(schema);
+  await applySchema();
   console.log("Schema is up to date.");
   await db().end();
 }

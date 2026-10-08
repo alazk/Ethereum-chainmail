@@ -8,8 +8,9 @@ const globalForDb = globalThis as unknown as { __chainmailSql?: Sql };
 
 export function db(): Sql {
   if (!globalForDb.__chainmailSql) {
-    const url = process.env.DATABASE_URL;
-    if (!url) throw new Error("DATABASE_URL is not set");
+    // DATABASE_URL, or POSTGRES_URL as set by Vercel's Supabase/Neon integrations.
+    const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!url) throw new Error("DATABASE_URL (or POSTGRES_URL) is not set");
     globalForDb.__chainmailSql = postgres(url, {
       max: Number(process.env.DATABASE_POOL_SIZE) || 3,
       prepare: false,

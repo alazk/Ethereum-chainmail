@@ -34,18 +34,19 @@ first. The backfill below fixes that.
 
 ## Deploy
 
-1. **Database.** Create a free Postgres on [Neon](https://neon.tech) or
-   [Supabase](https://supabase.com). Copy the pooled connection string.
-2. **RPC.** Get a mainnet URL from Alchemy, QuickNode or Infura. The indexer
-   makes one call per block, a few thousand calls a day.
-3. **Tables.** Either paste `db/setup.sql` into your database's SQL editor
-   and run it, or put `DATABASE_URL` in `.env.local` and run
-   `npm run db:migrate` and `npm run db:seed-labels` from your machine.
-   After editing labels, regenerate the file with
-   `npx tsx scripts/build-setup-sql.ts`.
-4. **Vercel.** Import this repo and set four environment variables:
-   `DATABASE_URL`, `ETH_RPC_URL`, `CRON_SECRET` and `ADMIN_SECRET` (any long
-   random strings for the last two). Deploy.
+1. **Vercel project.** Import this repo into Vercel.
+2. **Database.** In the project's Storage tab, add Supabase (or Neon) from
+   the marketplace and connect it to the project. Vercel sets `POSTGRES_URL`
+   for you, which the app reads when `DATABASE_URL` isn't set. A database you
+   created yourself works too: set `DATABASE_URL` to its pooled connection
+   string.
+3. **Environment variables.** Add `ETH_RPC_URL` (your Alchemy, QuickNode or
+   Infura mainnet URL), plus `CRON_SECRET` and `ADMIN_SECRET` (any long random
+   strings). Redeploy so they take effect.
+4. **Tables.** Nothing to do. The first ingest run creates the tables and
+   loads the labels. If you'd rather set it up by hand, paste `db/setup.sql`
+   into the database's SQL editor, or run `npm run db:migrate` and
+   `npm run db:seed-labels` locally.
 5. **Schedule.** Vercel's free plan only allows cron jobs once a day, so
    `vercel.json` has a daily catch-up run. The real schedule is the GitHub
    Action in `.github/workflows/ingest.yml`, which calls the indexer every 5

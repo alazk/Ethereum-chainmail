@@ -20,8 +20,11 @@ export default async function Home({ searchParams }: Props) {
     console.error(err);
     return (
       <Empty>
-        <p>The feed can't reach its database right now.</p>
-        <p>If you just deployed, set DATABASE_URL and run the migration (see the README).</p>
+        <p>The feed can't load right now.</p>
+        <p>
+          On a new deployment, the first ingest run creates the database tables. If that already ran, check
+          that the database is connected to the project (see the README).
+        </p>
       </Empty>
     );
   }
