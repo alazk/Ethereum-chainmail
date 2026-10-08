@@ -1,4 +1,6 @@
-# Pulls new blocks every 5 minutes by calling the deployed ingest endpoint.
+# Pulls new blocks every 15 minutes by calling the deployed ingest endpoint.
+# 15 minutes lets a Neon free-plan database sleep between runs and stay
+# inside its monthly compute hours. With Supabase or a paid plan, */5 is fine.
 # Needs two repository secrets: CHAINMAIL_URL (e.g. https://chainmail.vercel.app)
 # and CRON_SECRET (same value as in Vercel).
 #
@@ -8,7 +10,7 @@ name: ingest
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 concurrency:

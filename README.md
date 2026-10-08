@@ -49,8 +49,10 @@ first. The backfill below fixes that.
    `npm run db:seed-labels` locally.
 5. **Schedule.** Vercel's free plan only allows cron jobs once a day, so
    `vercel.json` has a daily catch-up run. The real schedule is the GitHub
-   Action in `.github/workflows/ingest.yml`, which calls the indexer every 5
-   minutes. In the repo settings, add two Actions secrets:
+   Action in `.github/workflows/ingest.yml`, which calls the indexer every 15
+   minutes. That gap lets a free Neon database sleep between runs and stay
+   inside its monthly compute hours; with Supabase you can change it to
+   `*/5`. In the repo settings, add two Actions secrets:
    - `CHAINMAIL_URL`: your deployment URL, like `https://chainmail.vercel.app`
    - `CRON_SECRET`: the same value as in Vercel
 
