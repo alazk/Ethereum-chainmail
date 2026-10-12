@@ -31,7 +31,7 @@ jobs:
             echo "Set the CHAINMAIL_URL and CRON_SECRET repository secrets first."
             exit 0
           fi
-          for i in 1 2 3 4 5 6; do
+          for i in $(seq 1 20); do
             body=$(curl -sS --fail-with-body --max-time 290 -X POST \
               -H "Authorization: Bearer $CRON_SECRET" \
               "$CHAINMAIL_URL/api/cron/ingest")
