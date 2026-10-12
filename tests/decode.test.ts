@@ -47,6 +47,12 @@ describe("decodeMessage", () => {
     ).toBeNull();
   });
 
+  it("rejects text with a NUL byte inside, even if the rest is readable", () => {
+    const withNul = "0x" + Buffer.from("this looks like a long readable message").toString("hex") + "00" +
+      Buffer.from(" but has a zero byte in the middle of it").toString("hex");
+    expect(decodeMessage(withNul)).toBeNull();
+  });
+
   it("rejects text that is mostly control characters", () => {
     expect(decodeMessage(hex("hi\u0001\u0002\u0003\u0004\u0005"))).toBeNull();
   });

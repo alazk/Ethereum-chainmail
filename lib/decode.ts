@@ -61,6 +61,8 @@ export function decodeMessage(input: string | null | undefined): string | null {
     return null; // not valid UTF-8, so a contract call or binary data
   }
 
+  // A NUL byte inside the text means binary data (and Postgres can't store it).
+  if (text.includes("\u0000")) return null;
   if (!isReadable(text)) return null;
   const trimmed = text.trim();
   return trimmed.length >= 2 ? trimmed : null;

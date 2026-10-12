@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { hasBearer } from "@/lib/auth";
 import { DEFAULT_MAX_BLOCKS, ingest } from "@/lib/ingest";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -21,6 +22,10 @@ async function handle(request: Request) {
     return NextResponse.json(result);
   } catch (err) {
     console.error("ingest failed", err);
+    // Keep a record in the database, since Action logs are hard to reach.
+    try {
+      await db()`insert into backfill_runs (mode, result) values ('ingest', ${db().json({ error: (err as Error).message } as never)})`;
+    } catch {}
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }
